@@ -89,6 +89,11 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
 
+app.MapControllerRoute(
+    name: "dashboard",
+    pattern: "Dashboard/{action=Index}/{id?}",
+    defaults: new { controller = "Dashboard" });
+
 // ═══════════════════════════════════════════════
 // 8. SEED ROLES + AUTO MIGRATE
 // ═══════════════════════════════════════════════
