@@ -1,0 +1,271 @@
+@model SubmitReadingViewModel
+@{
+    ViewData["Title"] = "Submit Reading";
+    bool hasPrediction = Model.PredictionResult != null;
+    var riskColor = Model.PredictionResult?.RiskLevel switch {
+        "Critical" => "danger",
+        "Warning"  => "warning",
+        "Safe"     => "success",
+        _          => "secondary"
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0"><i class="bi bi-plus-circle me-2 text-success"></i>Submit Plant Reading</h4>
+        <small class="text-muted">Enter current sensor readings to get AI-based NOx prediction</small>
+    </div>
+    <a asp-controller="Readings" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-table me-1"></i>Reading History
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- ── Input Form ── -->
+    <div class="col-xl-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-bottom">
+                <h6 class="fw-bold mb-0"><i class="bi bi-input-cursor-text me-2"></i>Plant Sensor Readings</h6>
+                <small class="text-muted">All readings are for current timestamp</small>
+            </div>
+            <div class="card-body">
+                <form asp-action="Submit" method="post" id="readingForm">
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+
+                    <!-- Fuel Consumption -->
+                    <div class="mb-3">
+                        <label asp-for="FuelConsumption" class="form-label fw-medium">
+                            <i class="bi bi-fire text-danger me-1"></i>@Html.DisplayNameFor(m => m.FuelConsumption)
+                        </label>
+                        <div class="input-group">
+                            <input asp-for="FuelConsumption" class="form-control" placeholder="e.g. 420"
+                                   step="0.1" type="number" oninput="updateSlider('fuel',this.value)" />
+                            <span class="input-group-text">kg/hr</span>
+                        </div>
+                        <input type="range" class="form-range mt-1" min="150" max="650" step="1"
+                               id="slider-fuel" oninput="syncInput('FuelConsumption',this.value)" />
+                        <div class="d-flex justify-content-between"><small class="text-muted">150</small><small class="text-muted">650 kg/hr</small></div>
+                        <span asp-validation-for="FuelConsumption" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Production Load -->
+                    <div class="mb-3">
+                        <label asp-for="ProductionLoad" class="form-label fw-medium">
+                            <i class="bi bi-speedometer text-info me-1"></i>@Html.DisplayNameFor(m => m.ProductionLoad)
+                        </label>
+                        <div class="input-group">
+                            <input asp-for="ProductionLoad" class="form-control" placeholder="e.g. 78"
+                                   step="0.1" type="number" oninput="updateSlider('load',this.value)" />
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <input type="range" class="form-range mt-1" min="20" max="100" step="1"
+                               id="slider-load" oninput="syncInput('ProductionLoad',this.value)" />
+                        <div class="d-flex justify-content-between"><small class="text-muted">20%</small><small class="text-muted">100%</small></div>
+                        <span asp-validation-for="ProductionLoad" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Temperature -->
+                    <div class="mb-3">
+                        <label asp-for="Temperature" class="form-label fw-medium">
+                            <i class="bi bi-thermometer-half text-warning me-1"></i>@Html.DisplayNameFor(m => m.Temperature)
+                        </label>
+                        <div class="input-group">
+                            <input asp-for="Temperature" class="form-control" placeholder="e.g. 840"
+                                   step="1" type="number" oninput="updateSlider('temp',this.value)" />
+                            <span class="input-group-text">°C</span>
+                        </div>
+                        <input type="range" class="form-range mt-1" min="500" max="1200" step="5"
+                               id="slider-temp" oninput="syncInput('Temperature',this.value)" />
+                        <div class="d-flex justify-content-between"><small class="text-muted">500°C</small><small class="text-muted">1200°C</small></div>
+                        <span asp-validation-for="Temperature" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Current NOx -->
+                    <div class="mb-3">
+                        <label asp-for="CurrentNox" class="form-label fw-medium">
+                            <i class="bi bi-wind text-success me-1"></i>@Html.DisplayNameFor(m => m.CurrentNox)
+                        </label>
+                        <div class="input-group">
+                            <input asp-for="CurrentNox" class="form-control" placeholder="e.g. 75"
+                                   step="0.1" type="number" oninput="updateSlider('nox',this.value)" />
+                            <span class="input-group-text">ppm</span>
+                        </div>
+                        <input type="range" class="form-range mt-1" min="0" max="200" step="1"
+                               id="slider-nox" oninput="syncInput('CurrentNox',this.value)" />
+                        <div class="d-flex justify-content-between"><small class="text-muted">0</small><small class="text-muted">200 ppm</small></div>
+                        <span asp-validation-for="CurrentNox" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Timestamp -->
+                    <div class="mb-4">
+                        <label asp-for="ReadingTimestamp" class="form-label fw-medium">
+                            <i class="bi bi-clock me-1 text-secondary"></i>Reading Timestamp
+                        </label>
+                        <input asp-for="ReadingTimestamp" class="form-control" type="datetime-local" />
+                        <span asp-validation-for="ReadingTimestamp" class="text-danger small"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 fw-semibold py-2" id="submitBtn">
+                        <i class="bi bi-cpu me-2"></i>Get AI Prediction
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Prediction Result Panel ── -->
+    <div class="col-xl-6">
+        @if (hasPrediction)
+        {
+            var result = Model.PredictionResult!;
+            <div class="card border-0 shadow-sm border-top border-4 border-@riskColor">
+                <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-robot me-2"></i>AI Prediction Result</h6>
+                    <span class="badge bg-@riskColor fs-6">@result.RiskLevel</span>
+                </div>
+                <div class="card-body">
+                    <!-- Big predicted NOx number -->
+                    <div class="text-center py-3">
+                        <div class="text-muted small mb-1">PREDICTED NOx — NEXT HOUR</div>
+                        <div class="display-4 fw-bold text-@riskColor">
+                            @result.PredictedNox.ToString("F1")
+                            <span class="fs-5 text-muted">ppm</span>
+                        </div>
+                        <div class="mt-2">
+                            @if (result.RiskLevel == "Critical")
+                            {
+                                <i class="bi bi-exclamation-octagon-fill text-danger fs-2"></i>
+                            }
+                            else if (result.RiskLevel == "Warning")
+                            {
+                                <i class="bi bi-exclamation-triangle-fill text-warning fs-2"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-circle-fill text-success fs-2"></i>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Alert message box -->
+                    <div class="alert alert-@riskColor border-0 mt-2 mb-3">
+                        <i class="bi bi-info-circle me-2"></i>@result.AlertMessage
+                    </div>
+
+                    <!-- Input vs Output comparison -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded text-center">
+                                <div class="text-muted small">Current NOx</div>
+                                <div class="fw-bold fs-5">@Model.CurrentNox?.ToString("F1")</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 rounded text-center bg-@riskColor bg-opacity-10">
+                                <div class="text-muted small">Predicted (1hr)</div>
+                                <div class="fw-bold fs-5 text-@riskColor">@result.PredictedNox.ToString("F1") ppm</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Change indicator -->
+                    @{
+                        var change = result.PredictedNox - (Model.CurrentNox ?? 0);
+                        var changeIcon = change > 0 ? "arrow-up-circle-fill text-danger" : "arrow-down-circle-fill text-success";
+                    }
+                    <div class="text-center mb-3">
+                        <i class="bi bi-@changeIcon me-1"></i>
+                        <span class="fw-semibold">@(change > 0 ? "+" : "")@change.ToString("F1") ppm</span>
+                        <span class="text-muted small"> expected change in next hour</span>
+                    </div>
+
+                    <!-- Model info -->
+                    <div class="d-flex justify-content-between text-muted small border-top pt-2">
+                        <span><i class="bi bi-graph-up me-1"></i>Model R² = @result.ModelConfidence.ToString("P0")</span>
+                        <span><i class="bi bi-hash me-1"></i>Reading #@result.ReadingId</span>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 d-flex gap-2">
+                    <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-secondary btn-sm flex-fill">
+                        <i class="bi bi-house me-1"></i>Dashboard
+                    </a>
+                    <a asp-controller="Alerts" asp-action="Index" class="btn btn-outline-warning btn-sm flex-fill">
+                        <i class="bi bi-bell me-1"></i>View Alerts
+                    </a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Placeholder before first prediction -->
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex flex-column align-items-center justify-content-center text-center py-5">
+                    <div class="mb-3" style="width:80px;height:80px;background:linear-gradient(135deg,#198754,#20c997);border-radius:20px;display:flex;align-items:center;justify-content:center;">
+                        <i class="bi bi-cpu text-white" style="font-size:2.2rem;"></i>
+                    </div>
+                    <h6 class="fw-bold">AI Prediction Engine Ready</h6>
+                    <p class="text-muted small mb-3">
+                        Enter current plant readings on the left and click
+                        <strong>Get AI Prediction</strong> to receive:
+                    </p>
+                    <ul class="list-unstyled text-start text-muted small">
+                        <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Predicted NOx level (next hour)</li>
+                        <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Risk classification (Safe / Warning / Critical)</li>
+                        <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Actionable alert message</li>
+                        <li><i class="bi bi-check2 text-success me-2"></i>Automatic alert creation if needed</li>
+                    </ul>
+                    <div class="mt-3 p-3 bg-light rounded text-start w-100">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>Model:</strong> XGBoost Regressor &nbsp;|&nbsp;
+                            <strong>R²:</strong> 0.86 &nbsp;|&nbsp;
+                            <strong>MAE:</strong> 8.3 ppm
+                        </small>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+@await Html.PartialAsync("_ValidationScriptsPartial")
+<script>
+    // Sync slider → input
+    function syncInput(fieldId, val) {
+        document.getElementById(fieldId).value = val;
+    }
+    // Sync input → slider
+    function updateSlider(sliderKey, val) {
+        const map = { fuel:'slider-fuel', load:'slider-load', temp:'slider-temp', nox:'slider-nox' };
+        const slider = document.getElementById(map[sliderKey]);
+        if (slider) slider.value = val;
+    }
+    // Init sliders from existing values
+    const fuelVal = document.getElementById('FuelConsumption').value;
+    const loadVal = document.getElementById('ProductionLoad').value;
+    const tempVal = document.getElementById('Temperature').value;
+    const noxVal  = document.getElementById('CurrentNox').value;
+    if (fuelVal && fuelVal !== '0') document.getElementById('slider-fuel').value = fuelVal;
+    if (loadVal && loadVal !== '0') document.getElementById('slider-load').value = loadVal;
+    if (tempVal && tempVal !== '0') document.getElementById('slider-temp').value = tempVal;
+    if (noxVal  && noxVal  !== '0') document.getElementById('slider-nox').value  = noxVal;
+
+    // Loading state on submit
+    document.getElementById('readingForm').addEventListener('submit', function() {
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Predicting...';
+    });
+
+    // Set datetime-local to now if empty
+    const tsField = document.getElementById('ReadingTimestamp');
+    if (!tsField.value) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        tsField.value = now.toISOString().slice(0, 16);
+    }
+</script>
+}

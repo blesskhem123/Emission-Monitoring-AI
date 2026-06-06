@@ -1,0 +1,135 @@
+@model ReadingsListViewModel
+@{
+    ViewData["Title"] = "Reading History";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0"><i class="bi bi-table me-2 text-primary"></i>Reading History</h4>
+        <small class="text-muted">All submitted plant readings with ML predictions</small>
+    </div>
+    <a asp-controller="Readings" asp-action="Submit" class="btn btn-success btn-sm">
+        <i class="bi bi-plus-circle me-1"></i>New Reading
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
+        <span class="fw-semibold small">Total: @Model.TotalCount readings</span>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-success-subtle text-success border">Safe</span>
+            <span class="badge bg-warning-subtle text-warning border">Warning</span>
+            <span class="badge bg-danger-subtle text-danger border">Critical</span>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3">#</th>
+                    <th>Timestamp</th>
+                    <th>Fuel (kg/hr)</th>
+                    <th>Load (%)</th>
+                    <th>Temp (°C)</th>
+                    <th>Current NOx</th>
+                    <th>Predicted NOx</th>
+                    <th>Risk</th>
+                    <th>Entered By</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Readings.Any())
+                {
+                    <tr>
+                        <td colspan="10" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            No readings yet.
+                            <a asp-controller="Readings" asp-action="Submit">Submit the first reading</a>
+                        </td>
+                    </tr>
+                }
+                @foreach (var r in Model.Readings)
+                {
+                    var badgeColor = r.RiskLevel switch {
+                        "Critical" => "danger",
+                        "Warning"  => "warning",
+                        "Safe"     => "success",
+                        _          => "secondary"
+                    };
+                    <tr>
+                        <td class="ps-3 text-muted small">@r.ReadingId</td>
+                        <td class="small">@r.ReadingTimestamp.ToString("dd-MMM HH:mm")</td>
+                        <td>@r.FuelConsumption.ToString("F1")</td>
+                        <td>@r.ProductionLoad.ToString("F1")</td>
+                        <td>@r.Temperature.ToString("F0")</td>
+                        <td>
+                            <span class="fw-semibold">@r.CurrentNox.ToString("F1")</span>
+                            <span class="text-muted small">ppm</span>
+                        </td>
+                        <td>
+                            @if (r.PredictedNox.HasValue)
+                            {
+                                <span class="fw-semibold text-@badgeColor">@r.PredictedNox.Value.ToString("F1")</span>
+                                <span class="text-muted small">ppm</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">Pending</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge bg-@badgeColor-subtle text-@badgeColor border border-@badgeColor-subtle">
+                                @r.RiskLevel
+                            </span>
+                        </td>
+                        <td class="small text-muted">@r.EnteredByName</td>
+                        <td>
+                            <a asp-controller="Readings" asp-action="Details" asp-route-id="@r.ReadingId"
+                               class="btn btn-sm btn-outline-secondary py-0">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer bg-transparent border-top d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+                Page @Model.CurrentPage of @Model.TotalPages
+            </small>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    @if (Model.CurrentPage > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage-1)">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    }
+                    @for (int i = Math.Max(1, Model.CurrentPage-2); i <= Math.Min(Model.TotalPages, Model.CurrentPage+2); i++)
+                    {
+                        <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                            <a class="page-link" asp-action="Index" asp-route-page="@i">@i</a>
+                        </li>
+                    }
+                    @if (Model.CurrentPage < Model.TotalPages)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage+1)">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        </div>
+    }
+</div>

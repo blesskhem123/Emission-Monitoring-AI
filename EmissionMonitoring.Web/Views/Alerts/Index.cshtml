@@ -1,0 +1,142 @@
+@model AlertsListViewModel
+@{
+    ViewData["Title"] = "Alert Center";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0"><i class="bi bi-bell me-2 text-warning"></i>Alert Center</h4>
+        <small class="text-muted">NOx emission alerts — acknowledge after taking corrective action</small>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm border-start border-danger border-4">
+            <div class="card-body d-flex align-items-center gap-3">
+                <i class="bi bi-exclamation-octagon-fill text-danger fs-2"></i>
+                <div>
+                    <div class="h3 fw-bold mb-0 text-danger">@Model.TotalCritical</div>
+                    <div class="text-muted small">Active Critical Alerts</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm border-start border-warning border-4">
+            <div class="card-body d-flex align-items-center gap-3">
+                <i class="bi bi-exclamation-triangle-fill text-warning fs-2"></i>
+                <div>
+                    <div class="h3 fw-bold mb-0 text-warning">@Model.TotalWarning</div>
+                    <div class="text-muted small">Active Warning Alerts</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm border-start border-secondary border-4">
+            <div class="card-body d-flex align-items-center gap-3">
+                <i class="bi bi-bell-slash text-secondary fs-2"></i>
+                <div>
+                    <div class="h3 fw-bold mb-0">@Model.TotalActive</div>
+                    <div class="text-muted small">Total Unacknowledged</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-bottom">
+        <ul class="nav nav-pills gap-1">
+            @foreach (var f in new[]{"All","Active","Critical","Warning","Acknowledged"})
+            {
+                <li class="nav-item">
+                    <a class="nav-link py-1 @(Model.FilterStatus==f?"active":"")"
+                       asp-action="Index" asp-route-filter="@f">@f</a>
+                </li>
+            }
+        </ul>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3">Severity</th>
+                    <th>Alert Message</th>
+                    <th>Predicted NOx</th>
+                    <th>Created At</th>
+                    <th>Status</th>
+                    <th>Acknowledged By</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Alerts.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-check-circle-fill text-success fs-2 d-block mb-2"></i>
+                            No alerts found for filter: <strong>@Model.FilterStatus</strong>
+                        </td>
+                    </tr>
+                }
+                @foreach (var a in Model.Alerts)
+                {
+                    var bc = a.Severity == "Critical" ? "danger" : "warning";
+                    <tr class="@(a.IsAcknowledged ? "opacity-60" : "")">
+                        <td class="ps-3">
+                            <span class="badge bg-@bc">
+                                <i class="bi bi-@(a.Severity=="Critical"?"exclamation-octagon":"exclamation-triangle") me-1"></i>
+                                @a.Severity
+                            </span>
+                        </td>
+                        <td style="max-width:320px;">
+                            <div class="small">@a.Message</div>
+                        </td>
+                        <td>
+                            <span class="fw-bold text-@bc">@a.PredictedNox.ToString("F1") ppm</span>
+                        </td>
+                        <td class="small text-muted">@a.CreatedAt.ToString("dd-MMM-yy HH:mm")</td>
+                        <td>
+                            @if (a.IsAcknowledged)
+                            {
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                    <i class="bi bi-check2 me-1"></i>Acknowledged
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                    <i class="bi bi-exclamation me-1"></i>Active
+                                </span>
+                            }
+                        </td>
+                        <td class="small text-muted">
+                            @if (a.IsAcknowledged)
+                            {
+                                @(a.AcknowledgedBy ?? "—")
+                                <br /><span style="font-size:.7rem;">@a.AcknowledgedAt?.ToString("HH:mm dd-MMM")</span>
+                            }
+                        </td>
+                        <td>
+                            @if (!a.IsAcknowledged && User.IsInRole("Admin") || User.IsInRole("Operator"))
+                            {
+                                <form asp-action="Acknowledge" asp-route-id="@a.AlertId" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-success"
+                                            onclick="return confirm('Mark alert #@a.AlertId as acknowledged?')">
+                                        <i class="bi bi-check2"></i> Ack
+                                    </button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

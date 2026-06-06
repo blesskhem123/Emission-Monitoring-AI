@@ -1,0 +1,31 @@
+{
+    "model_name": "XGBoost NOx Emission Predictor",
+    "version": "1.0.0",
+    "trained_on": "2026-06-05",
+    "algorithm": "XGBoost Regressor",
+    "features": [
+        "FuelConsumption",
+        "ProductionLoad",
+        "Temperature",
+        "CurrentNox"
+    ],
+    "target": "NextHourNox",
+    "nox_thresholds": {
+        "safe": 80.0,
+        "warning": 100.0,
+        "critical": 120.0
+    },
+    "metrics": {
+        "mae": 5.5733,
+        "rmse": 7.2038,
+        "r2": 0.9358,
+        "risk_accuracy": 86.76
+    },
+    "hyperparameters": {
+        "n_estimators": 300,
+        "max_depth": 6,
+        "learning_rate": 0.05,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8
+    }
+}

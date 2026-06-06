@@ -1,0 +1,322 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 me-2 text-success"></i>Dashboard</h4>
+        <small class="text-muted">@Model.PlantName &mdash; @Model.PlantType | Live Plant Status</small>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <!-- ML Service status badge -->
+        <span class="badge @(Model.MlServiceOnline ? "bg-success" : "bg-danger")">
+            <i class="bi bi-cpu me-1"></i>
+            ML Service @(Model.MlServiceOnline ? "Online" : "Offline")
+        </span>
+        <a asp-controller="Readings" asp-action="Submit" class="btn btn-success btn-sm">
+            <i class="bi bi-plus-circle me-1"></i>New Reading
+        </a>
+    </div>
+</div>
+
+<!-- ── Risk Banner (shown when Warning or Critical) ── -->
+@if (Model.RiskLevel == "Critical")
+{
+    <div class="alert alert-danger d-flex align-items-center gap-3 mb-4 border-0 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-octagon-fill fs-3 flex-shrink-0"></i>
+        <div>
+            <strong class="d-block">CRITICAL ALERT — Immediate Action Required</strong>
+            @Model.AlertMessage
+        </div>
+    </div>
+}
+else if (Model.RiskLevel == "Warning")
+{
+    <div class="alert alert-warning d-flex align-items-center gap-3 mb-4 border-0 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-3 flex-shrink-0"></i>
+        <div>
+            <strong class="d-block">WARNING — Monitor Closely</strong>
+            @Model.AlertMessage
+        </div>
+    </div>
+}
+
+<!-- ── KPI Cards Row 1 — Current Plant Parameters ── -->
+<div class="row g-3 mb-3">
+    <div class="col-xl-3 col-md-6">
+        <div class="kpi-card border-start border-primary border-4">
+            <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-fire"></i></div>
+            <div>
+                <div class="kpi-label">Fuel Consumption</div>
+                <div class="kpi-value">@(Model.LatestFuelConsumption?.ToString("F1") ?? "--") <span class="kpi-unit">kg/hr</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="kpi-card border-start border-info border-4">
+            <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-speedometer"></i></div>
+            <div>
+                <div class="kpi-label">Production Load</div>
+                <div class="kpi-value">@(Model.LatestProductionLoad?.ToString("F1") ?? "--") <span class="kpi-unit">%</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="kpi-card border-start border-warning border-4">
+            <div class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-thermometer-half"></i></div>
+            <div>
+                <div class="kpi-label">Stack Temperature</div>
+                <div class="kpi-value">@(Model.LatestTemperature?.ToString("F0") ?? "--") <span class="kpi-unit">°C</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="kpi-card border-start border-success border-4">
+            <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-wind"></i></div>
+            <div>
+                <div class="kpi-label">Current NOx</div>
+                <div class="kpi-value">@(Model.LatestCurrentNox?.ToString("F1") ?? "--") <span class="kpi-unit">ppm</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── KPI Cards Row 2 — Prediction & Alerts ── -->
+<div class="row g-3 mb-4">
+    <!-- Predicted NOx card -->
+    <div class="col-xl-4 col-md-6">
+        @{
+            var riskColor = Model.RiskLevel switch {
+                "Critical" => "danger",
+                "Warning"  => "warning",
+                "Safe"     => "success",
+                _          => "secondary"
+            };
+            var riskIcon = Model.RiskLevel switch {
+                "Critical" => "exclamation-octagon-fill",
+                "Warning"  => "exclamation-triangle-fill",
+                "Safe"     => "check-circle-fill",
+                _          => "dash-circle"
+            };
+        }
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <small class="text-muted fw-semibold text-uppercase" style="font-size:.7rem; letter-spacing:.05em;">
+                        <i class="bi bi-cpu me-1"></i>AI Prediction (Next Hour)
+                    </small>
+                    <span class="badge bg-@riskColor">@Model.RiskLevel</span>
+                </div>
+                <div class="d-flex align-items-end gap-2">
+                    <span class="display-6 fw-bold text-@riskColor">
+                        @(Model.PredictedNox?.ToString("F1") ?? "--")
+                    </span>
+                    <span class="text-muted mb-2">ppm</span>
+                </div>
+                <div class="mt-2">
+                    <!-- NOx gauge bar -->
+                    @{
+                        var pct = Model.PredictedNox.HasValue
+                            ? Math.Min(100, Model.PredictedNox.Value / Model.NoxCriticalLimit * 100)
+                            : 0;
+                    }
+                    <div class="progress" style="height:8px;">
+                        <div class="progress-bar bg-@riskColor" style="width:@pct.ToString("F0")%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <small class="text-muted">0</small>
+                        <small class="text-muted">Safe @Model.NoxSafeLimit</small>
+                        <small class="text-muted">Warn @Model.NoxWarningLimit</small>
+                        <small class="text-muted">@Model.NoxCriticalLimit ppm</small>
+                    </div>
+                </div>
+                @if (Model.ModelConfidence.HasValue)
+                {
+                    <small class="text-muted d-block mt-1">
+                        <i class="bi bi-graph-up me-1"></i>Model R² = @Model.ModelConfidence.Value.ToString("P0")
+                    </small>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Alerts card -->
+    <div class="col-xl-4 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <small class="text-muted fw-semibold text-uppercase d-block mb-2" style="font-size:.7rem; letter-spacing:.05em;">
+                    <i class="bi bi-bell me-1"></i>Active Alerts
+                </small>
+                <div class="display-6 fw-bold @(Model.ActiveAlertsCount > 0 ? "text-danger" : "text-success")">
+                    @Model.ActiveAlertsCount
+                </div>
+                <div class="mt-2">
+                    <span class="badge bg-danger-subtle text-danger me-1">
+                        @Model.CriticalAlertsToday Critical today
+                    </span>
+                </div>
+                <a asp-controller="Alerts" asp-action="Index" class="btn btn-sm btn-outline-danger mt-2 w-100">
+                    View All Alerts <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's readings card -->
+    <div class="col-xl-4 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <small class="text-muted fw-semibold text-uppercase d-block mb-2" style="font-size:.7rem; letter-spacing:.05em;">
+                    <i class="bi bi-calendar-check me-1"></i>Today's Summary
+                </small>
+                <div class="display-6 fw-bold text-primary">@Model.TotalReadingsToday</div>
+                <div class="text-muted small mb-2">Readings submitted</div>
+                @if (Model.LatestReadingTime.HasValue)
+                {
+                    <small class="text-muted">
+                        <i class="bi bi-clock me-1"></i>Last: @Model.LatestReadingTime.Value.ToString("HH:mm dd-MMM")
+                    </small>
+                }
+                <div class="mt-2">
+                    <a asp-controller="Readings" asp-action="Submit" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="bi bi-plus me-1"></i>Submit Reading
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── NOx Trend Chart ── -->
+<div class="row g-3">
+    <div class="col-xl-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0"><i class="bi bi-graph-up me-2 text-success"></i>NOx Trend — Last 24 Hours</h6>
+                <a asp-controller="Analytics" asp-action="Index" class="btn btn-sm btn-outline-secondary">Full Analytics</a>
+            </div>
+            <div class="card-body">
+                <canvas id="noxTrendChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Alerts widget -->
+    <div class="col-xl-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="fw-bold mb-0"><i class="bi bi-bell me-2 text-warning"></i>Recent Alerts</h6>
+            </div>
+            <div class="card-body p-0">
+                @if (!Model.RecentAlerts.Any())
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-check-circle-fill text-success fs-2 d-block mb-2"></i>
+                        No active alerts
+                    </div>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var alert in Model.RecentAlerts)
+                        {
+                            <li class="list-group-item px-3 py-2">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-@(alert.Severity=="Critical"?"exclamation-octagon-fill text-danger":"exclamation-triangle-fill text-warning") mt-1"></i>
+                                    <div class="flex-grow-1">
+                                        <div class="small fw-semibold">@alert.Severity Alert</div>
+                                        <div class="text-muted" style="font-size:.72rem;">@alert.CreatedAt.ToString("HH:mm dd-MMM")</div>
+                                    </div>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <a asp-controller="Alerts" asp-action="Index" class="btn btn-sm btn-outline-warning w-100">
+                    Alert Center <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+// NOx Trend Chart.js
+const labels       = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartLabels));
+const currentNox   = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartCurrentNox));
+const predictedNox = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartPredictedNox));
+const safeLimit    = @Model.NoxSafeLimit;
+const warnLimit    = @Model.NoxWarningLimit;
+const critLimit    = @Model.NoxCriticalLimit;
+
+const ctx = document.getElementById('noxTrendChart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [
+            {
+                label: 'Current NOx (ppm)',
+                data: currentNox,
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13,110,253,0.08)',
+                borderWidth: 2,
+                pointRadius: 3,
+                fill: true,
+                tension: 0.3
+            },
+            {
+                label: 'Predicted NOx (ppm)',
+                data: predictedNox,
+                borderColor: '#fd7e14',
+                backgroundColor: 'rgba(253,126,20,0.06)',
+                borderWidth: 2,
+                borderDash: [5, 3],
+                pointRadius: 3,
+                fill: false,
+                tension: 0.3
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { position: 'top' },
+            annotation: {
+                annotations: {
+                    safeLine: {
+                        type: 'line', yMin: safeLimit, yMax: safeLimit,
+                        borderColor: 'rgba(25,135,84,0.5)', borderWidth: 1,
+                        borderDash: [4,4], label: { content: 'Safe', display: true }
+                    },
+                    warnLine: {
+                        type: 'line', yMin: warnLimit, yMax: warnLimit,
+                        borderColor: 'rgba(255,193,7,0.7)', borderWidth: 1.5,
+                        borderDash: [4,4]
+                    },
+                    critLine: {
+                        type: 'line', yMin: critLimit, yMax: critLimit,
+                        borderColor: 'rgba(220,53,69,0.7)', borderWidth: 1.5,
+                        borderDash: [4,4]
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: { display: true, text: 'NOx (ppm)' }
+            },
+            x: {
+                ticks: { maxTicksLimit: 12 }
+            }
+        }
+    }
+});
+</script>
+}
