@@ -13,6 +13,10 @@
       "PackagePath": "staticwebassets\\favicon.ico"
     },
     {
+      "Id": "C:\\Users\\bless\\Downloads\\Emission Monitoring AI\\EmissionMonitoring.Web\\wwwroot\\images\\indianoil.png",
+      "PackagePath": "staticwebassets\\images\\indianoil.png"
+    },
+    {
       "Id": "C:\\Users\\bless\\Downloads\\Emission Monitoring AI\\EmissionMonitoring.Web\\wwwroot\\js\\site.js",
       "PackagePath": "staticwebassets\\js\\site.js"
     },

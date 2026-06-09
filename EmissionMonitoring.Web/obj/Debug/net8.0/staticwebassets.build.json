@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "T9bk/XcrryRrbTfSpRkNioQCijpMwY1fJESSlCXOHgc=",
+  "Hash": "/8c6+01DPpCts9FzkQvXj4dyT5kunXBN8dFzqRh3l4A=",
   "Source": "EmissionMonitoring.Web",
   "BasePath": "_content/EmissionMonitoring.Web",
   "Mode": "Default",
@@ -1231,6 +1231,25 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\favicon.ico"
+    },
+    {
+      "Identity": "C:\\Users\\bless\\Downloads\\Emission Monitoring AI\\EmissionMonitoring.Web\\wwwroot\\images\\indianoil.png",
+      "SourceId": "EmissionMonitoring.Web",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\bless\\Downloads\\Emission Monitoring AI\\EmissionMonitoring.Web\\wwwroot\\",
+      "BasePath": "_content/EmissionMonitoring.Web",
+      "RelativePath": "images/indianoil.png",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\images\\indianoil.png"
     },
     {
       "Identity": "C:\\Users\\bless\\Downloads\\Emission Monitoring AI\\EmissionMonitoring.Web\\wwwroot\\js\\site.js",

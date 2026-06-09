@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("EmissionMonitoring.Web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2add049fec98ecc3c4b8a359acb0e6effc8dac4d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+73343687cc3045ea88dca5ff1cbbed08e7dfd002")]
 [assembly: System.Reflection.AssemblyProductAttribute("EmissionMonitoring.Web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("EmissionMonitoring.Web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
